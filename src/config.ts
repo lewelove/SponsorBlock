@@ -179,7 +179,12 @@ class ConfigClass extends ProtoConfig<SBConfig, SBStorage> {
         await super.fetchConfig();
 
         // Administrator values take precedence over stored settings and defaults
-        applyManagedConfig(this.cachedSyncConfig!, await getManagedConfig(), Object.keys(this.syncDefaults));
+        const managed = await getManagedConfig();
+        applyManagedConfig(this.cachedSyncConfig!, managed, Object.keys(this.syncDefaults));
+
+        if (this.cachedLocalStorage) {
+            applyManagedConfig(this.cachedLocalStorage, managed, Object.keys(this.localDefaults));
+        }
     }
 
     resetToDefault() {

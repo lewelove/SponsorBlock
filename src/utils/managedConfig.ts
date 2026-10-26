@@ -1,9 +1,12 @@
 /**
- * Identity and server-derived keys. An administrator must never set these:
- * `userID` is the submission identity and would be shared by every managed
- * machine, `permissions` and `payments` are computed by the server.
+ * Keys an administrator must never set. `userID` is the submission identity and
+ * would be shared by every managed machine, `permissions` and `payments` are
+ * computed by the server, the rest is per-device data or runtime state.
  */
-const UNMANAGED_KEYS = ["userID", "permissions", "payments"];
+const UNMANAGED_KEYS = [
+    "userID", "permissions", "payments",
+    "downvotedSegments", "unsubmittedSegments", "skipProfileTemp", "navigationApiAvailable"
+];
 
 /**
  * Reads the administrator-provided config (`chrome.storage.managed`, fed by

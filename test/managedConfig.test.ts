@@ -1,6 +1,10 @@
 import { applyManagedConfig, getManagedConfig } from "../src/utils/managedConfig";
 
-const knownKeys = ["muteSegments", "showUpsells", "userID", "permissions", "payments"];
+const knownKeys = [
+    "muteSegments", "showUpsells", "alreadyInstalled", "skipRules",
+    "userID", "permissions", "payments",
+    "unsubmittedSegments", "downvotedSegments", "skipProfileTemp", "navigationApiAvailable"
+];
 
 describe("Apply managed config", () => {
     it("Overrides declared keys and leaves the others alone", () => {
@@ -18,6 +22,19 @@ describe("Apply managed config", () => {
         applyManagedConfig(config, managed, knownKeys);
 
         expect(config).toEqual({ userID: "user", permissions: {}, payments: {} });
+    });
+
+    it("Never lets the policy replace device data or runtime state", () => {
+        const data = { unsubmittedSegments: {}, downvotedSegments: {}, skipProfileTemp: null, navigationApiAvailable: true };
+        const config = { ...data };
+        const managed = {
+            unsubmittedSegments: { video: [] }, downvotedSegments: { video: [] },
+            skipProfileTemp: { time: 1, configID: "id" }, navigationApiAvailable: false
+        };
+
+        applyManagedConfig(config, managed, knownKeys);
+
+        expect(config).toEqual(data);
     });
 
     it("Drops keys the extension does not know", () => {
