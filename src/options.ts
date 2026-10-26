@@ -12,6 +12,7 @@ import CategoryChooser from "./render/CategoryChooser";
 import UnsubmittedVideos from "./render/UnsubmittedVideos";
 import KeybindComponent from "./components/options/KeybindComponent";
 import { showDonationLink } from "./utils/configUtils";
+import { stringifyConfig } from "./utils/genericUtils";
 import { localizeHtmlPage } from "../maze-utils/src/setup";
 import { StorageChangesObject } from "../maze-utils/src/config";
 import { getHash } from "../maze-utils/src/hash";
@@ -593,9 +594,9 @@ function activatePrivateTextChange(element: HTMLElement) {
     switch (option) {
         case "*": {
             if (optionType === "local") {
-                result = JSON.stringify(Config.cachedLocalStorage);
+                result = stringifyConfig(Config.cachedLocalStorage);
             } else {
-                result = JSON.stringify(Config.cachedSyncConfig);
+                result = stringifyConfig(Config.cachedSyncConfig);
             }
             break;
         }
@@ -686,7 +687,7 @@ function downloadConfig(element: Element) {
     const file = document.createElement("a");
     const jsonData = JSON.parse(JSON.stringify(optionType === "local" ? Config.cachedLocalStorage : Config.cachedSyncConfig));
     const dateTimeString = new Date().toJSON().replace("T", "_").replace(/:/g, ".").replace(/.\d+Z/g, "")
-    file.setAttribute("href", `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(jsonData))}`);
+    file.setAttribute("href", `data:text/json;charset=utf-8,${encodeURIComponent(stringifyConfig(jsonData))}`);
     file.setAttribute("download", `SponsorBlock${optionType === "local" ? "OtherData" : "Config"}_${dateTimeString}.json`);
     document.body.append(file);
     file.click();

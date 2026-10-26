@@ -25,7 +25,33 @@ function indexesOf<T>(array: T[], value: T): number[] {
     return array.map((v, i) => v === value ? i : -1).filter(i => i !== -1);
 }
 
+/**
+ * Keys in a stable order, so exported configs diff cleanly.
+ */
+function sortKeys(value: unknown): unknown {
+    if (Array.isArray(value)) {
+        return value.map(sortKeys);
+    }
+
+    if (typeof value !== "object" || value === null) {
+        return value;
+    }
+
+    const sorted: Record<string, unknown> = {};
+
+    for (const [key, child] of Object.entries(value).sort(([left], [right]) => left.localeCompare(right))) {
+        sorted[key] = sortKeys(child);
+    }
+
+    return sorted;
+}
+
+export function stringifyConfig(config: unknown): string {
+    return JSON.stringify(sortKeys(config), null, 2);
+}
+
 export const GenericUtils = {
     getLuminance,
-    indexesOf
+    indexesOf,
+    stringifyConfig
 }
