@@ -4,6 +4,7 @@ import { Category, CategorySelection, CategorySkipOption, NoticeVisibilityMode, 
 import { Keybind, keybindEquals, ProtoConfig } from "../maze-utils/src/config";
 import type { HashedValue } from "../maze-utils/src/hash";
 import { AdvancedSkipCheck, AdvancedSkipPredicate, AdvancedSkipRule, Permission, PredicateOperator } from "./utils/skipRule.type";
+import { applyManagedConfig, getManagedConfig } from "./utils/managedConfig";
 
 interface SBConfig {
     userID: string;
@@ -174,6 +175,13 @@ interface SBStorage {
 }
 
 class ConfigClass extends ProtoConfig<SBConfig, SBStorage> {
+    async fetchConfig(): Promise<void> {
+        await super.fetchConfig();
+
+        // Administrator values take precedence over stored settings and defaults
+        applyManagedConfig(this.cachedSyncConfig!, await getManagedConfig(), Object.keys(this.syncDefaults));
+    }
+
     resetToDefault() {
         chrome.storage.sync.set({
             ...this.syncDefaults,
