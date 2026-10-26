@@ -29,6 +29,13 @@ utils.wait(() => Config.isReady()).then(function() {
     if (Config.config.supportInvidious) utils.setupExtraSiteContentScripts();
 });
 
+// A policy pushed while the browser runs is applied without a restart.
+chrome.storage.onChanged.addListener((_changes, area) => {
+    if (area === "managed") {
+        void utils.wait(() => Config.isReady()).then(() => Config.seedManagedConfig());
+    }
+});
+
 setupBackgroundRequestProxy();
 setupTabUpdates(Config);
 

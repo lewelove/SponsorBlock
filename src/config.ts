@@ -4,9 +4,9 @@ import { Category, CategorySelection, CategorySkipOption, NoticeVisibilityMode, 
 import { Keybind, keybindEquals, ProtoConfig } from "../maze-utils/src/config";
 import type { HashedValue } from "../maze-utils/src/hash";
 import { AdvancedSkipCheck, AdvancedSkipPredicate, AdvancedSkipRule, Permission, PredicateOperator } from "./utils/skipRule.type";
-import { applyManagedConfig, getManagedConfig } from "./utils/managedConfig";
+import { applyManagedConfig, getManagedConfig, markPolicyApplied, policyAppliedThisSession } from "./utils/managedConfig";
 
-interface SBConfig {
+export interface SBConfig {
     userID: string;
     isVip: boolean;
     permissions: Record<Category, Permission>;
@@ -156,7 +156,7 @@ export interface CustomConfiguration {
     minDuration: number | null;
 }
 
-interface SBStorage {
+export interface SBStorage {
     /* VideoID prefixes to UUID prefixes */
     downvotedSegments: Record<VideoID & HashedValue, VideoDownvotes>;
     navigationApiAvailable: boolean;
@@ -178,12 +178,35 @@ class ConfigClass extends ProtoConfig<SBConfig, SBStorage> {
     async fetchConfig(): Promise<void> {
         await super.fetchConfig();
 
-        // Administrator values take precedence over stored settings and defaults
+        if (!isExtensionContext() || await policyAppliedThisSession()) {
+            return;
+        }
+
+        await this.seedManagedConfig();
+        await markPolicyApplied();
+    }
+
+    /**
+     * Copies the deployment's policy into the stored config, so the settings
+     * behave like a normal export: editable until something writes over them.
+     */
+    async seedManagedConfig(): Promise<void> {
         const managed = await getManagedConfig();
-        applyManagedConfig(this.cachedSyncConfig!, managed, Object.keys(this.syncDefaults));
+
+        if (this.cachedSyncConfig) {
+            const seeded = applyManagedConfig(this.cachedSyncConfig, managed, Object.keys(this.syncDefaults));
+
+            if (Object.keys(seeded).length !== 0) {
+                void chrome.storage.sync.set(seeded);
+            }
+        }
 
         if (this.cachedLocalStorage) {
-            applyManagedConfig(this.cachedLocalStorage, managed, Object.keys(this.localDefaults));
+            const seeded = applyManagedConfig(this.cachedLocalStorage, managed, Object.keys(this.localDefaults));
+
+            if (Object.keys(seeded).length !== 0) {
+                void chrome.storage.local.set(seeded);
+            }
         }
     }
 
@@ -200,6 +223,15 @@ class ConfigClass extends ProtoConfig<SBConfig, SBStorage> {
             ...this.localDefaults,
         });
     }
+}
+
+/**
+ * Content scripts run inside the page, where session storage is out of reach,
+ * so only the extension's own pages and worker apply the policy. Reading the
+ * policy on every page load would undo a reset of the settings.
+ */
+function isExtensionContext(): boolean {
+    return typeof location !== "undefined" && location.protocol.endsWith("extension:");
 }
 
 function migrateOldSyncFormats(config: SBConfig, local: SBStorage) {
